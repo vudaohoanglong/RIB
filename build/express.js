@@ -64,8 +64,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 var tmp_promise_1 = require("tmp-promise");
-var body_parser_1 = __importDefault(require("body-parser"));
 var express_1 = __importDefault(require("express"));
+var mongoose_1 = __importDefault(require("mongoose"));
+var authRoutes_1 = __importDefault(require("./authRoutes"));
+var passport_1 = __importDefault(require("passport"));
+var passport_jwt_1 = __importDefault(require("passport-jwt"));
+var passport_local_1 = require("passport-local");
+var JWTStrategy = passport_jwt_1.default.Strategy, ExtractJwt = passport_jwt_1.default.ExtractJwt;
+var bcrypt_1 = __importDefault(require("bcrypt"));
+var User_1 = __importDefault(require("./models/User"));
 var express_fileupload_1 = __importDefault(require("express-fileupload"));
 var i18next_1 = __importDefault(require("i18next"));
 var i18next_fs_backend_1 = __importDefault(require("i18next-fs-backend"));
@@ -74,11 +81,13 @@ var path_1 = __importDefault(require("path"));
 var h5p_express_1 = require("@lumieducation/h5p-express");
 var h5p_html_exporter_1 = __importDefault(require("@lumieducation/h5p-html-exporter"));
 var H5P = __importStar(require("@lumieducation/h5p-server"));
+var login_1 = __importDefault(require("./login"));
 var startPageRenderer_1 = __importDefault(require("./startPageRenderer"));
 var expressRoutes_1 = __importDefault(require("./expressRoutes"));
-var User_1 = __importDefault(require("./User"));
+var User_2 = __importDefault(require("./User"));
 var createH5PEditor_1 = __importDefault(require("./createH5PEditor"));
 var utils_1 = require("./utils");
+var config_js_1 = require("../config.js");
 var tmpDir;
 var start = function () { return __awaiter(void 0, void 0, void 0, function () {
     var useTempUploads, translationFunction, config, h5pEditor, h5pPlayer, server, htmlExporter, port;
@@ -137,10 +146,77 @@ var start = function () { return __awaiter(void 0, void 0, void 0, function () {
                 h5pEditor = _a.sent();
                 h5pPlayer = new H5P.H5PPlayer(h5pEditor.libraryStorage, h5pEditor.contentStorage, config, undefined, undefined, function (key, language) { return translationFunction(key, { lng: language }); }, undefined, h5pEditor.contentUserDataStorage);
                 server = (0, express_1.default)();
-                server.use(body_parser_1.default.json({ limit: '500mb' }));
-                server.use(body_parser_1.default.urlencoded({
-                    extended: true
-                }));
+                return [4 /*yield*/, mongoose_1.default.connect(config_js_1.databaseURL, {})
+                        .then(function () {
+                        console.log('Connected to MongoDB');
+                    })
+                        .catch(function (err) {
+                        console.error('Failed to connect to MongoDB:', err);
+                    })];
+            case 6:
+                _a.sent();
+                // Passport initialization
+                passport_1.default.use(new passport_local_1.Strategy({
+                    usernameField: 'email',
+                    passwordField: 'password', // Tên trường chứa mật khẩu
+                }, function (email, password, done) { return __awaiter(void 0, void 0, void 0, function () {
+                    var user, isMatch, error_1;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                _a.trys.push([0, 3, , 4]);
+                                return [4 /*yield*/, User_1.default.findOne({ email: email })];
+                            case 1:
+                                user = _a.sent();
+                                // Kiểm tra người dùng có tồn tại không
+                                if (!user) {
+                                    return [2 /*return*/, done(null, false, { message: 'Người dùng không tồn tại' })];
+                                }
+                                return [4 /*yield*/, bcrypt_1.default.compare(password, user.password)];
+                            case 2:
+                                isMatch = _a.sent();
+                                // Kiểm tra mật khẩu có khớp không
+                                if (!isMatch) {
+                                    return [2 /*return*/, done(null, false, { message: 'Mật khẩu không đúng' })];
+                                }
+                                // Xác thực thành công, trả về người dùng
+                                return [2 /*return*/, done(null, user)];
+                            case 3:
+                                error_1 = _a.sent();
+                                return [2 /*return*/, done(error_1)];
+                            case 4: return [2 /*return*/];
+                        }
+                    });
+                }); }));
+                // Cấu hình Passport JWT Strategy
+                passport_1.default.use(new JWTStrategy({
+                    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+                    secretOrKey: 'your_secret_key',
+                }, function (jwtPayload, done) { return __awaiter(void 0, void 0, void 0, function () {
+                    var user, error_2;
+                    return __generator(this, function (_a) {
+                        switch (_a.label) {
+                            case 0:
+                                _a.trys.push([0, 2, , 3]);
+                                return [4 /*yield*/, User_1.default.findById(jwtPayload.id)];
+                            case 1:
+                                user = _a.sent();
+                                // Kiểm tra người dùng có tồn tại không
+                                if (!user) {
+                                    return [2 /*return*/, done(null, false, { message: 'Người dùng không tồn tại' })];
+                                }
+                                // Xác thực thành công, trả về người dùng
+                                return [2 /*return*/, done(null, user)];
+                            case 2:
+                                error_2 = _a.sent();
+                                return [2 /*return*/, done(error_2)];
+                            case 3: return [2 /*return*/];
+                        }
+                    });
+                }); }));
+                server.use(passport_1.default.initialize());
+                server.use(express_1.default.json());
+                server.use('/api', authRoutes_1.default);
                 // Configure file uploads
                 server.use((0, express_fileupload_1.default)({
                     limits: { fileSize: h5pEditor.config.maxTotalSize },
@@ -162,7 +238,9 @@ var start = function () { return __awaiter(void 0, void 0, void 0, function () {
                 // In your real implementation you would create the object using sessions,
                 // JSON webtokens or some other means.
                 server.use(function (req, res, next) {
-                    req.user = new User_1.default();
+                    req.user = new User_2.default();
+                    console.log(req.body);
+                    console.log(req.headers['authorization']);
                     next();
                 });
                 // The i18nextExpressMiddleware injects the function t(...) into the req
@@ -216,7 +294,11 @@ var start = function () { return __awaiter(void 0, void 0, void 0, function () {
                 }); });
                 // The startPageRenderer displays a list of content objects and shows
                 // buttons to display, edit, delete and download existing content.
-                server.get('/', (0, startPageRenderer_1.default)(h5pEditor));
+                server.get('/', function (req, res, next) {
+                    res.redirect('/login');
+                });
+                server.get('/dashboard', (0, startPageRenderer_1.default)(h5pEditor));
+                server.get('/login', (0, login_1.default)());
                 server.use('/client', express_1.default.static(path_1.default.join(__dirname, 'client')));
                 // We only include the whole node_modules directory for convenience. Don't
                 // do this in a production app.

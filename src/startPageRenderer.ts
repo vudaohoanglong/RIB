@@ -4,7 +4,8 @@ export default function render(
     editor: H5P.H5PEditor
 ): (req: any, res: any) => any {
     return async (req, res) => {
-        const contentIds = await editor.contentManager.listContent();
+        const contentIds = await editor.contentManager.listContent(req.user);
+        console.log(contentIds);
         const contentObjects = await Promise.all(
             contentIds.map(async (id) => ({
                 content: await editor.contentManager.getContentMetadata(
@@ -84,10 +85,6 @@ export default function render(
                     )
                     .join('')}
                 </div>
-                <hr/>
-                <div id="content-type-cache-container"></div>
-                <hr/>
-                <div id="library-admin-container"></div>
             </div>
 
             <script>
