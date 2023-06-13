@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
-import axios from 'axios';
 export default function render(): (req: any, res: any) => any {
+
   return async (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -8,6 +8,7 @@ export default function render(): (req: any, res: any) => any {
 
     <head>
       <meta charset="UTF-8">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.1.9/dist/sweetalert2.min.css">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
@@ -271,22 +272,21 @@ export default function render(): (req: any, res: any) => any {
     <body>
       <div class="container" id="container">
         <div class="form-container sign-up-container">
-          <form action="#">
+          <form id="registerForm" action="/register" method="POST">
             <h1>Create Account</h1>
-            <input type="text" placeholder="Name" />
-            <input type="email" placeholder="Email" />
-            <input type="password" placeholder="Password" />
+            <input type="email" placeholder="Email" id="regEmail" />
+            <input type="password" placeholder="Password" id="regPass" />
             <button>Sign Up</button>
           </form>
         </div>
         <div class="form-container sign-in-container">
-          <form action="#">
+          <form id="loginForm" action="/login" method="POST">
             <h1>Sign in</h1>
-            <input type="email" placeholder="Email" />
-            <input type="password" placeholder="Password" />
+            <input id= "email" name="email" type="email" placeholder="Email" required />
+            <input id= "password" name="password" type="password" placeholder="Password" required/>
             <a href="#">Forgot your password?</a>
             <button>
-              <a style="color: white; font-size: 12px" href="/dashboard">Sign In</a>
+              <a style="color: white; font-size: 12px" >Sign In</a>
             </button>
           </form>
         </div>
@@ -305,6 +305,8 @@ export default function render(): (req: any, res: any) => any {
           </div>
         </div>
       </div>
+      <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.1.9/dist/sweetalert2.min.js"></script>
       <script>
         const signUpButton = document.getElementById('signUp');
         const signInButton = document.getElementById('signIn');
@@ -321,8 +323,61 @@ export default function render(): (req: any, res: any) => any {
             container.classList.remove("right-panel-active");
           });
         }
-      </script>
+        $(document).ready(function() {
+          $('#loginForm').submit(function(e) {
+            e.preventDefault();
+            var email = $('input[name="email"]').val();
+            var password = $('input[name="password"]').val();
+            $.ajax({
+              url: '/login',
+              method: 'POST',
+              data: { email: email, password: password },
+              dataType: 'json',
+              success: function(response) {
+                location.reload();
+                window.location.href = '/dashboard';
+              },
+              error: function(response) {
+                switch(response.status){
+                  case 401:
+                      alert("Username or Password incorrect!")
+                      break;
+                  default:
+                      alert("Internal server error!");
+                      break;
+                }
+              }
+            });
+          });
 
+          $('#registerForm').submit(function(e) {
+            e.preventDefault();
+            var email = $('#regEmail').val();
+            var password = $('#regPass').val();
+            $.ajax({
+              url: '/register',
+              method: 'POST',
+              data: { email: email, password: password },
+              dataType: 'json',
+              success: function(response) {
+                location.reload();
+                alert(response.message);
+              },
+              error: function(response) {
+                switch(response.status){
+                  case 400:
+                      alert("Email already used")
+                      break;
+                  default:
+                      alert("Internal server error!");
+                      break;
+                }
+              }
+            });
+          });
+        })
+          
+      </script>
       <footer>
         <p>
           Created with <i class="fa fa-heart"></i> by

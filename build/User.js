@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
  */
 var User = /** @class */ (function () {
     function User() {
-        this.id = '2';
+        this.id = '1';
         this.name = 'Firstname Surname';
         this.canInstallRecommended = true;
         this.canUpdateAndInstallLibraries = true;

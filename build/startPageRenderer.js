@@ -43,10 +43,9 @@ function render(editor) {
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, editor.contentManager.listContent(req.user)];
+                case 0: return [4 /*yield*/, editor.contentManager.listContent()];
                 case 1:
                     contentIds = _a.sent();
-                    console.log(contentIds);
                     return [4 /*yield*/, Promise.all(contentIds.map(function (id) { return __awaiter(_this, void 0, void 0, function () {
                             var _a;
                             return __generator(this, function (_b) {

@@ -5,7 +5,7 @@ import { IUser } from '@lumieducation/h5p-server';
  */
 export default class User implements IUser {
     constructor() {
-        this.id = '2';
+        this.id = '1';
         this.name = 'Firstname Surname';
         this.canInstallRecommended = true;
         this.canUpdateAndInstallLibraries = true;

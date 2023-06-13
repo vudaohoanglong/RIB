@@ -2,21 +2,15 @@ import 'dotenv/config';
 
 import { dir, DirectoryResult } from 'tmp-promise';
 import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
 import express from 'express';
-import mongoose from 'mongoose';
-import routes from './authRoutes';
-import passport from 'passport';
-import passportJWT from 'passport-jwt';
-import { Strategy as LocalStrategy } from 'passport-local';
-const { Strategy: JWTStrategy, ExtractJwt } = passportJWT;
-import bcrypt from 'bcrypt';
-import MyUser from './models/User'
 import fileUpload from 'express-fileupload';
 import i18next from 'i18next';
 import i18nextFsBackend from 'i18next-fs-backend';
+import mongoose from 'mongoose'
 import i18nextHttpMiddleware from 'i18next-http-middleware';
 import path from 'path';
-
+import jwt from 'jsonwebtoken';
 import {
     h5pAjaxExpressRouter,
     libraryAdministrationExpressRouter,
@@ -31,8 +25,9 @@ import expressRoutes from './expressRoutes';
 import User from './User';
 import createH5PEditor from './createH5PEditor';
 import { displayIps, clearTempFiles } from './utils';
-import {secretKey, databaseURL} from '../config.js';
-
+import dbUser from './models/dbUser';
+import { loginUser, registerUser } from './controllers/user';
+import { requireLogin } from './controllers/auth';
 let tmpDir: DirectoryResult;
 
 const start = async (): Promise<void> => {
@@ -120,76 +115,25 @@ const start = async (): Promise<void> => {
 
     // We now set up the Express server in the usual fashion.
     const server = express();
-    await mongoose.connect(databaseURL, {
-      })
-      .then(() => {
-        console.log('Connected to MongoDB');
-      })
-      .catch(err => {
-        console.error('Failed to connect to MongoDB:', err);
-      });
-     // Passport initialization
-     passport.use(
-        new LocalStrategy(
-          {
-            usernameField: 'email', // Tên trường chứa email
-            passwordField: 'password', // Tên trường chứa mật khẩu
-          },
-          async (email, password, done) => {
-            try {
-              // Tìm người dùng với email được cung cấp
-              const user = await MyUser.findOne({ email });
-      
-              // Kiểm tra người dùng có tồn tại không
-              if (!user) {
-                return done(null, false, { message: 'Người dùng không tồn tại' });
-              }
-      
-              // Kiểm tra mật khẩu
-              const isMatch = await bcrypt.compare(password, user.password);
-      
-              // Kiểm tra mật khẩu có khớp không
-              if (!isMatch) {
-                return done(null, false, { message: 'Mật khẩu không đúng' });
-              }
-      
-              // Xác thực thành công, trả về người dùng
-              return done(null, user);
-            } catch (error) {
-              return done(error);
-            }
-          }
-        )
-      );
-      
-      // Cấu hình Passport JWT Strategy
-      passport.use(
-        new JWTStrategy(
-          {
-            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            secretOrKey: 'your_secret_key',
-          },
-          async (jwtPayload, done) => {
-            try {
-              // Tìm người dùng dựa trên ID trong JWT payload
-              const user = await MyUser.findById(jwtPayload.id);
-      
-              // Kiểm tra người dùng có tồn tại không
-              if (!user) {
-                return done(null, false, { message: 'Người dùng không tồn tại' });
-              }
-      
-              // Xác thực thành công, trả về người dùng
-              return done(null, user);
-            } catch (error) {
-              return done(error);
-            }
-          }
-        )
-      );
-    server.use(passport.initialize());
+
+    await mongoose.connect('mongodb+srv://vudaohoanglong:I88Vwaar1JCETmz0@cluster0.z72bz.mongodb.net/?retryWrites=true&w=majority', {
+    })
+    .then(() => {
+      console.log('Connected to MongoDB');
+    })
+    .catch(err => {
+      console.error('Failed to connect to MongoDB:', err);
+    });
     server.use(express.json());
-    server.use('/api', routes);
+    server.use(cookieParser())
+    server.use(bodyParser.json({ limit: '500mb' }));
+    server.use(
+        bodyParser.urlencoded({
+            extended: true
+        })
+    );
+    server.post('/login',loginUser);
+    server.post('/register',registerUser);
     // Configure file uploads
     server.use(
         fileUpload({
@@ -214,11 +158,9 @@ const start = async (): Promise<void> => {
     // JSON webtokens or some other means.
     server.use((req: IRequestWithUser, res, next) => {
         req.user = new User();
-        console.log(req.body);
-        console.log(req.headers['authorization'])
         next();
     });
-
+    
     // The i18nextExpressMiddleware injects the function t(...) into the req
     // object. This function must be there for the Express adapter
     // (H5P.adapters.express) to function properly.
@@ -273,7 +215,6 @@ const start = async (): Promise<void> => {
         contentTypeCacheExpressRouter(h5pEditor.contentTypeCache)
     );
 
-
     const htmlExporter = new H5PHtmlExporter(
         h5pEditor.libraryStorage,
         h5pEditor.contentStorage,
@@ -297,13 +238,17 @@ const start = async (): Promise<void> => {
         );
         res.status(200).send(html);
     });
-
+    
     // The startPageRenderer displays a list of content objects and shows
     // buttons to display, edit, delete and download existing content.
-    server.get('/',function(req,res,next){
-        res.redirect('/login')
-    })
-    server.get('/dashboard', startPageRenderer(h5pEditor));
+    server.get('/dashboard', requireLogin, (req:any,res)=>{
+        if (req.permission == "Teacher") {
+            console.log("check");
+            const returnedDashboard = startPageRenderer(h5pEditor);
+            returnedDashboard(req,res);
+        }
+        else if (req.permission == "Student") return res.status(200).json("Student");
+    });
 
     server.get('/login', login());
 
