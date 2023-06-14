@@ -40,6 +40,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var express_1 = __importDefault(require("express"));
+var dbUser_1 = __importDefault(require("./models/dbUser"));
+var auth_1 = require("./controllers/auth");
 /**
  * @param h5pEditor
  * @param h5pPlayer
@@ -80,7 +82,7 @@ function default_1(h5pEditor, h5pPlayer, languageOverride) {
             }
         });
     }); });
-    router.get('/edit/:contentId', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    router.get('/edit/:contentId', auth_1.checkPermission, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
         var page;
         var _a;
         return __generator(this, function (_b) {
@@ -96,7 +98,7 @@ function default_1(h5pEditor, h5pPlayer, languageOverride) {
             }
         });
     }); });
-    router.post('/edit/:contentId', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    router.post('/edit/:contentId', auth_1.checkPermission, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
         var contentId;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -109,14 +111,16 @@ function default_1(h5pEditor, h5pPlayer, languageOverride) {
             }
         });
     }); });
-    router.get('/new', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    router.get('/new', auth_1.checkPermission, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
         var page;
         var _a;
         return __generator(this, function (_b) {
             switch (_b.label) {
-                case 0: return [4 /*yield*/, h5pEditor.render(undefined, languageOverride === 'auto'
-                        ? (_a = req.language) !== null && _a !== void 0 ? _a : 'en'
-                        : languageOverride, req.user)];
+                case 0:
+                    console.log(req.user);
+                    return [4 /*yield*/, h5pEditor.render(undefined, languageOverride === 'auto'
+                            ? (_a = req.language) !== null && _a !== void 0 ? _a : 'en'
+                            : languageOverride, req.user)];
                 case 1:
                     page = _b.sent();
                     res.send(page);
@@ -125,8 +129,8 @@ function default_1(h5pEditor, h5pPlayer, languageOverride) {
             }
         });
     }); });
-    router.post('/new', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-        var contentId;
+    router.post('/new', auth_1.checkPermission, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+        var _User, contentId;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -138,16 +142,26 @@ function default_1(h5pEditor, h5pPlayer, languageOverride) {
                         res.status(400).send('Malformed request').end();
                         return [2 /*return*/];
                     }
-                    return [4 /*yield*/, h5pEditor.saveOrUpdateContent(undefined, req.body.params.params, req.body.params.metadata, req.body.library, req.user)];
+                    console.log(req.user);
+                    return [4 /*yield*/, dbUser_1.default.findById(req.user.id)];
                 case 1:
+                    _User = _a.sent();
+                    console.log('ffafaf');
+                    console.log(_User);
+                    return [4 /*yield*/, h5pEditor.saveOrUpdateContent(undefined, req.body.params.params, req.body.params.metadata, req.body.library, req.user)];
+                case 2:
                     contentId = _a.sent();
+                    _User.contentIDs.push({ contentId: contentId });
+                    return [4 /*yield*/, _User.save()];
+                case 3:
+                    _a.sent();
                     res.send(JSON.stringify({ contentId: contentId }));
                     res.status(200).end();
                     return [2 /*return*/];
             }
         });
     }); });
-    router.get('/delete/:contentId', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    router.get('/delete/:contentId', auth_1.checkPermission, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
         var error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {

@@ -21,13 +21,16 @@ import H5PHtmlExporter from '@lumieducation/h5p-html-exporter';
 import * as H5P from '@lumieducation/h5p-server';
 import login from './login';
 import startPageRenderer from './startPageRenderer';
+import studentDashboard from './studentDashboard';
 import expressRoutes from './expressRoutes';
 import User from './User';
 import createH5PEditor from './createH5PEditor';
 import { displayIps, clearTempFiles } from './utils';
 import dbUser from './models/dbUser';
-import { loginUser, registerUser } from './controllers/user';
+import { loginUser, logout, registerUser } from './controllers/user';
 import { requireLogin } from './controllers/auth';
+import socket from './socket';
+import { ID } from 'yjs';
 let tmpDir: DirectoryResult;
 
 const start = async (): Promise<void> => {
@@ -134,6 +137,7 @@ const start = async (): Promise<void> => {
     );
     server.post('/login',loginUser);
     server.post('/register',registerUser);
+    server.post('/logout',logout)
     // Configure file uploads
     server.use(
         fileUpload({
@@ -156,8 +160,8 @@ const start = async (): Promise<void> => {
     // object to be present in requests.
     // In your real implementation you would create the object using sessions,
     // JSON webtokens or some other means.
-    server.use((req: IRequestWithUser, res, next) => {
-        req.user = new User();
+    server.use(requireLogin,(req : any, res, next) => {
+        req.user = new User(req.userID,req.permission);
         next();
     });
     
@@ -247,7 +251,10 @@ const start = async (): Promise<void> => {
             const returnedDashboard = startPageRenderer(h5pEditor);
             returnedDashboard(req,res);
         }
-        else if (req.permission == "Student") return res.status(200).json("Student");
+        else if (req.permission == "Student"){
+            const returnedDashboard = studentDashboard(h5pEditor);
+            returnedDashboard(req,res);
+        }
     });
 
     server.get('/login', login());
@@ -284,7 +291,7 @@ const start = async (): Promise<void> => {
     // For developer convenience we display a list of IPs, the server is running
     // on. You can then simply click on it in the terminal.
     displayIps(port);
-
+    socket();
     server.listen(port);
 };
 

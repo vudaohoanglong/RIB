@@ -4,7 +4,9 @@ interface IdbUser extends mongoose.Document {
     password: String;
     role: String;
     contentIDs: [
-        contentId: String
+        {
+            contentId: String;
+        }
     ];
 }
 interface IdbUserModel extends mongoose.Model<IdbUser> {

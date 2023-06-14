@@ -39,9 +39,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loginUser = exports.registerUser = void 0;
+exports.loginUser = exports.registerUser = exports.logout = void 0;
 var dbUser_1 = __importDefault(require("../models/dbUser"));
 var auth_1 = require("./auth");
+function logout(req, res) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            if (req.method == "POST") { }
+            else {
+                res.set("Allow", 'POST');
+                return [2 /*return*/, res.status(405).json({ message: 'Method Not Allowed' })];
+            }
+            res.clearCookie('token');
+            res.status(200).send({ message: "Logged out successfully" });
+            return [2 /*return*/];
+        });
+    });
+}
+exports.logout = logout;
 function registerUser(req, res) {
     return __awaiter(this, void 0, void 0, function () {
         var _a, email, password, existingUser, newUser;

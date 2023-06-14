@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser'
-export function requireLogin(req, res, next) {
+export async function requireLogin(req, res, next) {
+	if (req.path == '/login') return next();
 	if (req.cookies && req.cookies.token) {
 		jwt.verify(req.cookies.token, "privateKEY", (err, decoded) => {
 			if (err) {
@@ -16,6 +17,10 @@ export function requireLogin(req, res, next) {
 	  res.redirect('/login');
 	}
   }
+export async function checkPermission(req,res,next){
+	if (req.permission=="Teacher") next();
+	else res.status(401).json({message:"You are not allowed"});
+}
 export function generateToken(payload){
 	try {
 		return jwt.sign(payload, "privateKEY");

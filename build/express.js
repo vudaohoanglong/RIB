@@ -78,12 +78,14 @@ var h5p_html_exporter_1 = __importDefault(require("@lumieducation/h5p-html-expor
 var H5P = __importStar(require("@lumieducation/h5p-server"));
 var login_1 = __importDefault(require("./login"));
 var startPageRenderer_1 = __importDefault(require("./startPageRenderer"));
+var studentDashboard_1 = __importDefault(require("./studentDashboard"));
 var expressRoutes_1 = __importDefault(require("./expressRoutes"));
 var User_1 = __importDefault(require("./User"));
 var createH5PEditor_1 = __importDefault(require("./createH5PEditor"));
 var utils_1 = require("./utils");
 var user_1 = require("./controllers/user");
 var auth_1 = require("./controllers/auth");
+var socket_1 = __importDefault(require("./socket"));
 var tmpDir;
 var start = function () { return __awaiter(void 0, void 0, void 0, function () {
     var useTempUploads, translationFunction, config, h5pEditor, h5pPlayer, server, htmlExporter, port;
@@ -159,6 +161,7 @@ var start = function () { return __awaiter(void 0, void 0, void 0, function () {
                 }));
                 server.post('/login', user_1.loginUser);
                 server.post('/register', user_1.registerUser);
+                server.post('/logout', user_1.logout);
                 // Configure file uploads
                 server.use((0, express_fileupload_1.default)({
                     limits: { fileSize: h5pEditor.config.maxTotalSize },
@@ -179,8 +182,8 @@ var start = function () { return __awaiter(void 0, void 0, void 0, function () {
                 // object to be present in requests.
                 // In your real implementation you would create the object using sessions,
                 // JSON webtokens or some other means.
-                server.use(function (req, res, next) {
-                    req.user = new User_1.default();
+                server.use(auth_1.requireLogin, function (req, res, next) {
+                    req.user = new User_1.default(req.userID, req.permission);
                     next();
                 });
                 // The i18nextExpressMiddleware injects the function t(...) into the req
@@ -240,8 +243,10 @@ var start = function () { return __awaiter(void 0, void 0, void 0, function () {
                         var returnedDashboard = (0, startPageRenderer_1.default)(h5pEditor);
                         returnedDashboard(req, res);
                     }
-                    else if (req.permission == "Student")
-                        return res.status(200).json("Student");
+                    else if (req.permission == "Student") {
+                        var returnedDashboard = (0, studentDashboard_1.default)(h5pEditor);
+                        returnedDashboard(req, res);
+                    }
                 });
                 server.get('/login', (0, login_1.default)());
                 server.use('/client', express_1.default.static(path_1.default.join(__dirname, 'client')));
@@ -276,6 +281,7 @@ var start = function () { return __awaiter(void 0, void 0, void 0, function () {
                 // For developer convenience we display a list of IPs, the server is running
                 // on. You can then simply click on it in the terminal.
                 (0, utils_1.displayIps)(port);
+                (0, socket_1.default)();
                 server.listen(port);
                 return [2 /*return*/];
         }

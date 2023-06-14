@@ -1,6 +1,15 @@
 import dbUser from "../models/dbUser";
 import bcrypt from 'bcrypt';
 import { generateToken } from "./auth";
+export async function logout(req,res) {
+    if (req.method == "POST"){}
+    else{
+        res.set("Allow",'POST');
+        return res.status(405).json({message: 'Method Not Allowed'});
+    }
+    res.clearCookie('token');
+    res.status(200).send({message:"Logged out successfully"});
+}
 export async function registerUser(req,res){
     if (req.method=="POST"){}
     else{

@@ -2,13 +2,12 @@ import mongoose from "mongoose";
 import validator from "validator";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { ContentId } from "@lumieducation/h5p-server";
 interface IdbUser extends mongoose.Document{
     email: String,
     password: String,
     role: String,
-    contentIDs:[
-        contentId: String
+    contentIDs:[{
+        contentId: String}
     ]
 } 
 interface IdbUserModel extends mongoose.Model<IdbUser>{
